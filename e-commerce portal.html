@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mini E-Commerce Portal (Demo)</title>
+  <style>
+    :root{
+      --accent:#2563eb;
+      --muted:#666;
+      --bg:#f7f8fb;
+      --card:#fff;
+      --danger:#dc2626;
+      --success:#16a34a;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;font-family:Inter,system-ui,Arial;
+      background:var(--bg);color:#111;
+    }
+    header{
+      background:linear-gradient(90deg,#0ea5e9, #2563eb);
+      color:white;padding:12px 18px;display:flex;align-items:center;justify-content:space-between;
+      gap:12px;flex-wrap:wrap;
+    }
+    .brand{font-weight:700;font-size:1.1rem}
+    nav{display:flex;gap:12px;align-items:center}
+    nav a{color:rgba(255,255,255,0.95);text-decoration:none;padding:8px 10px;border-radius:6px}
+    nav a.active, nav a:hover{background:rgba(255,255,255,0.14)}
+    .container{max-width:1100px;margin:20px auto;padding:0 16px}
+    .grid{display:grid;grid-template-columns:1fr 300px;gap:20px}
+    .card{background:var(--card);border-radius:10px;padding:14px;box-shadow:0 6px 18px rgba(16,24,40,0.06)}
+    .product-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+    .product{border:1px solid #eee;border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:8px}
+    .product img{width:100%;height:140px;object-fit:cover;border-radius:6px}
+    .price{font-weight:700;color:var(--accent)}
+    .btn{background:var(--accent);color:white;padding:8px 10px;border:none;border-radius:8px;cursor:pointer}
+    .btn.secondary{background:#e6eaf9;color:var(--accent);font-weight:600}
+    .small{font-size:0.9rem;color:var(--muted)}
+    form input, form textarea, form select{
+      width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;margin:8px 0;
+    }
+    .error{color:var(--danger);font-size:0.9rem}
+    .success{color:var(--success);font-size:0.95rem}
+    footer{max-width:1100px;margin:18px auto;color:var(--muted);padding:8px 16px;text-align:center}
+    .list{display:flex;flex-direction:column;gap:8px}
+    .row{display:flex;gap:8px;align-items:center}
+    .badge{background:#f0f5ff;color:var(--accent);padding:4px 8px;border-radius:999px;font-weight:600;font-size:0.9rem}
+    .nav-right{display:flex;gap:8px;align-items:center}
+    .link-btn{background:transparent;border:1px solid rgba(255,255,255,0.25);color:white;padding:6px 8px;border-radius:8px;cursor:pointer}
+    .muted{color:var(--muted)}
+    .rating{color:#f59e0b;font-weight:700}
+    /* responsive */
+    @media (max-width:900px){
+      .grid{grid-template-columns:1fr}
+      header{justify-content:center}
+      nav{order:2;width:100%;justify-content:center}
+      .nav-right{order:3}
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div style="display:flex;gap:12px;align-items:center">
+      <div class="brand">shopoo</div>
+      <div class="badge small">E-Commerce Portal</div>
+    </div>
+
+    <nav id="mainNav">
+      <a href="#home" data-route="home" class="active">Home</a>
+      <a href="#products" data-route="products">Products</a>
+      <a href="#orders" data-route="orders">Orders</a>
+      <a href="#wishlist" data-route="wishlist">Wishlist</a>
+      <a href="#contact" data-route="contact">Contact Us</a>
+      <a href="#about" data-route="about">About Us</a>
+    </nav>
+
+    <div class="nav-right">
+      <div id="loggedAs" class="muted small">Not signed in</div>
+      <button class="link-btn" id="openRegisterBtn">Register</button>
+      <button class="link-btn" id="openLoginBtn">Login</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <div id="view" class="grid">
+      <!-- Primary content -->
+      <div id="content" class="card">
+        <!-- content injected here -->
+      </div>
+
+      <!-- Right sidebar -->
+      <aside class="card">
+        <h3>Your Quick Panel</h3>
+        <div class="list small" id="quickPanel">
+          <div class="row"><strong>Orders:</strong> <span id="quickOrders" style="margin-left:auto">0</span></div>
+          <div class="row"><strong>Wishlist:</strong> <span id="quickWishlist" style="margin-left:auto">0</span></div>
+          <div class="row"><strong>Reviews:</strong> <span id="quickReviews" style="margin-left:auto">0</span></div>
+        </div>
+        <hr />
+        <div>
+          <h4>Customer Care</h4>
+          <p class="small">Open 9:00 - 18:00 (Mon - Fri)</p>
+          <button class="btn" id="openCustomerCare">Contact Support</button>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <footer>
+    This is a demo mini-portal for learning purposes — no real transactions. &bull; Built with HTML/CSS/JS.
+  </footer>
+
+  <!-- Templates and scripts -->
+  <script>
+    /***********************
+     * Simple front-end SPA
+     * Features:
+     * - Menu navigation (hash based)
+     * - Registration & Login with validation (localStorage)
+     * - Products list with add to wishlist / order
+     * - Orders list, Wishlist list
+     * - Comments & Reviews collection
+     * - Customer Care form and Reporting options
+     ***********************/
+
+    // ---------- Sample data ----------
+    const SAMPLE_PRODUCTS = [
+      { id: 'p1', title:'Wireless Headphones', price:1299, img:'https://picsum.photos/seed/p1/640/360', desc:'Comfortable noise-isolating headphones.' },
+      { id: 'p2', title:'Smart Watch', price:3999, img:'https://picsum.photos/seed/p2/640/360', desc:'Track fitness and notifications.' },
+      { id: 'p3', title:'Bluetooth Speaker', price:2199, img:'https://picsum.photos/seed/p3/640/360', desc:'Portable speaker with deep bass.' },
+      { id: 'p4', title:'Classic Backpack', price:1599, img:'https://picsum.photos/seed/p4/640/360', desc:'Water-resistant daily backpack.' },
+      { id: 'p5', title:'Mechanical Keyboard', price:4499, img:'https://picsum.photos/seed/p5/640/360', desc:'Tactile switches and RGB lighting.' }
+    ];
+
+    // ---------- Utilities ----------
+    function $(sel){return document.querySelector(sel)}
+    function saveState(key, obj){localStorage.setItem(key, JSON.stringify(obj))}
+    function loadState(key, fallback){ try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : fallback } catch(e){ return fallback } }
+
+    // ---------- App State ----------
+    const STATE = {
+      users: loadState('users', []),         // {email,name,passwordHash}
+      currentUser: loadState('currentUser', null), // email
+      wishlist: loadState('wishlist', {}),  // { email: [productId,...] }
+      orders: loadState('orders', {}),      // { email: [{orderId, productId, qty, date}, ...] }
+      reviews: loadState('reviews', []),    // {email,productId, rating, comment, date}
+    };
+
+    // ---------- Basic helpers ----------
+    function formatCurrency(n){ return '₹' + n.toLocaleString('en-IN') }
+    function uid(prefix='id'){ return prefix + Math.random().toString(36).slice(2,9) }
+
+    // ---------- Rendering / Navigation ----------
+    function setActiveNav(route){
+      document.querySelectorAll('#mainNav a').forEach(a => {
+        a.classList.toggle('active', a.dataset.route === route)
+      });
+    }
+
+    function renderView(route){
+      setActiveNav(route);
+      const content = $('#content');
+      content.innerHTML = ''; // clear
+      if(route === 'home'){
+        content.appendChild(renderHome());
+      } else if(route === 'products'){
+        content.appendChild(renderProducts());
+      } else if(route === 'orders'){
+        content.appendChild(renderOrders());
+      } else if(route === 'wishlist'){
+        content.appendChild(renderWishlist());
+      } else if(route === 'contact'){
+        content.appendChild(renderContact());
+      } else if(route === 'about'){
+        content.appendChild(renderAbout());
+      } else {
+        content.appendChild(renderHome());
+      }
+      refreshQuickPanel();
+    }
+
+    function getCurrentUserObj(){
+      if(!STATE.currentUser) return null;
+      return STATE.users.find(u => u.email === STATE.currentUser) || null;
+    }
+
+    // ---------- Page components ----------
+    function renderHome(){
+      const wrapper = document.createElement('div');
+      const h = document.createElement('h2'); h.textContent = 'Welcome to Shoply (Demo)';
+      const p = document.createElement('p'); p.className='small';
+      p.textContent = 'This demo shows menu navigation, registration/login validation, product listing, wishlist, orders, comments & reviews, and customer care.';
+      wrapper.appendChild(h); wrapper.appendChild(p);
+
+      // latest products
+      const sec = document.createElement('div'); sec.style.marginTop='12px';
+      const sh = document.createElement('h3'); sh.textContent = 'Featured Products';
+      sec.appendChild(sh);
+
+      const grid = document.createElement('div'); grid.className='product-grid';
+      SAMPLE_PRODUCTS.slice(0,4).forEach(p => {
+        const el = document.createElement('div'); el.className='product';
+        el.innerHTML = `
+          <img src="${p.img}" alt="${p.title}" />
+          <div style="flex:1">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <strong>${p.title}</strong>
+              <div class="price">${formatCurrency(p.price)}</div>
+            </div>
+            <p class="small">${p.desc}</p>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn add-wishlist" data-id="${p.id}">Wishlist</button>
+            <button class="btn secondary add-cart" data-id="${p.id}">Order</button>
+          </div>
+        `;
+        grid.appendChild(el);
+      });
+      sec.appendChild(grid);
+      wrapper.appendChild(sec);
+
+      // reviews snapshot
+      const revs = loadState('reviews', []);
+      const rsec = document.createElement('div'); rsec.style.marginTop='18px';
+      const rh = document.createElement('h3'); rh.textContent='Latest Reviews'; rsec.appendChild(rh);
+      const sample = revs.slice(-5).reverse();
+      if(sample.length === 0){
+        const e = document.createElement('p'); e.className='small muted'; e.textContent='No reviews yet.';
+        rsec.appendChild(e);
+      } else {
+        sample.forEach(rv => {
+          const box = document.createElement('div'); box.className='card'; box.style.marginTop='8px';
+          box.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between"><div><strong>${rv.email}</strong></div><div class="rating">${'★'.repeat(rv.rating)}</div></div>
+          <p class="small">${rv.comment}</p><p class="muted small">${new Date(rv.date).toLocaleString()}</p>`;
+          rsec.appendChild(box);
+        });
+      }
+      wrapper.appendChild(rsec);
+
+      return wrapper;
+    }
+
+    function renderProducts(){
+      const wrapper = document.createElement('div');
+      const h = document.createElement('h2'); h.textContent = 'All Products'; wrapper.appendChild(h);
+
+      const grid = document.createElement('div'); grid.className='product-grid'; grid.style.marginTop='12px';
+
+      SAMPLE_PRODUCTS.forEach(p => {
+        const el = document.createElement('div'); el.className='product';
+        el.innerHTML = `
+          <img src="${p.img}" alt="${p.title}" />
+          <div style="flex:1">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <strong>${p.title}</strong>
+              <div class="price">${formatCurrency(p.price)}</div>
+            </div>
+            <p class="small">${p.desc}</p>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn add-wishlist" data-id="${p.id}">Add to Wishlist</button>
+            <button class="btn secondary add-cart" data-id="${p.id}">Buy Now</button>
+          </div>
+          <div style="margin-top:8px">
+            <div style="display:flex;gap:8px;align-items:center">
+              <input type="number" min="1" value="1" class="qty" data-id="${p.id}" style="width:70px;padding:6px" />
+              <button class="btn leave-review" data-id="${p.id}">Leave Review</button>
+              <button class="btn secondary view-reviews" data-id="${p.id}">View Reviews</button>
+            </div>
+          </div>
+        `;
+        grid.appendChild(el);
+      });
+
+      wrapper.appendChild(grid);
+      // review modal placeholder
+      return wrapper;
+    }
+
+    function renderOrders(){
+      const wrapper = document.createElement('div'); const h = document.createElement('h2'); h.textContent='My Orders'; wrapper.appendChild(h);
+
+      const user = getCurrentUserObj();
+      if(!user){
+        wrapper.appendChild(unauthMessage('orders'));
+        return wrapper;
+      }
+
+      const userOrders = (STATE.orders[user.email] || []);
+      if(userOrders.length === 0){
+        const p = document.createElement('p'); p.className='small muted'; p.textContent='You have not placed any orders yet.';
+        wrapper.appendChild(p);
+        return wrapper;
+      }
+
+      userOrders.forEach(o => {
+        const prod = SAMPLE_PRODUCTS.find(p=>p.id===o.productId) || {title:'(deleted product)'};
+        const box = document.createElement('div'); box.className='card'; box.style.marginTop='8px';
+        box.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between">
+            <div><strong>${prod.title}</strong><div class="small muted">${prod.desc}</div></div>
+            <div style="text-align:right"><div>${formatCurrency(prod.price * o.qty)}</div><div class="small muted">Qty: ${o.qty}</div></div>
+          </div>
+          <div class="small muted" style="margin-top:8px">Ordered on: ${new Date(o.date).toLocaleString()}</div>`;
+        wrapper.appendChild(box);
+      });
+
+      return wrapper;
+    }
+
+    function renderWishlist(){
+      const wrapper = document.createElement('div'); const h = document.createElement('h2'); h.textContent='Wishlist'; wrapper.appendChild(h);
+
+      const user = getCurrentUserObj();
+      if(!user){
+        wrapper.appendChild(unauthMessage('wishlist'));
+        return wrapper;
+      }
+
+      const list = (STATE.wishlist[user.email] || []);
+      if(list.length === 0){
+        const p = document.createElement('p'); p.className='small muted'; p.textContent='Your wishlist is empty.';
+        wrapper.appendChild(p);
+        return wrapper;
+      }
+
+      list.forEach(pid=>{
+        const prod = SAMPLE_PRODUCTS.find(p => p.id === pid) || {title:'(removed)'};
+        const div = document.createElement('div'); div.className='card'; div.style.marginTop='8px';
+        div.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between">
+            <div><strong>${prod.title}</strong><div class="small muted">${prod.desc}</div></div>
+            <div style="display:flex;gap:8px">
+              <button class="btn place-order" data-id="${prod.id}">Order</button>
+              <button class="btn secondary remove-wishlist" data-id="${prod.id}">Remove</button>
+            </div>
+          </div>`;
+        wrapper.appendChild(div);
+      });
+
+      return wrapper;
+    }
+
+    function renderContact(){
+      const wrapper = document.createElement('div'); wrapper.innerHTML = '<h2>Contact Us</h2>';
+      const card = document.createElement('div'); card.className='card'; card.style.marginTop='12px';
+      card.innerHTML = `
+        <p class="small">Need help? Fill this form and our customer care team will reach you.</p>
+        <form id="contactForm">
+          <input type="text" id="contactName" placeholder="Your Name" required />
+          <input type="email" id="contactEmail" placeholder="Email" required />
+          <select id="contactTopic">
+            <option value="order">Order / Delivery</option>
+            <option value="product">Product info</option>
+            <option value="complaint">Complaint</option>
+            <option value="other">Other</option>
+          </select>
+          <textarea id="contactMessage" rows="4" placeholder="Describe your issue" required></textarea>
+          <div id="contactError" class="error"></div>
+          <button class="btn" type="submit">Send</button>
+        </form>
+      `;
+      wrapper.appendChild(card);
+
+      // show recent reports
+      const rp = document.createElement('div'); rp.style.marginTop='12px';
+      rp.innerHTML = `<h3>Reporting Options</h3><p class="small">Report a product or a seller. Reports are saved locally (demo).</p>
+        <form id="reportForm">
+          <select id="reportType"><option value="product">Product</option><option value="seller">Seller</option></select>
+          <input type="text" id="reportTarget" placeholder="Product ID or Seller email" required />
+          <textarea id="reportReason" rows="3" placeholder="Reason for reporting" required></textarea>
+          <div id="reportMsg" class="small muted"></div>
+          <button class="btn" type="submit">Submit Report</button>
+        </form>`;
+      wrapper.appendChild(rp);
+
+      return wrapper;
+    }
+
+    function renderAbout(){
+      const wrapper = document.createElement('div');
+      wrapper.innerHTML = `<h2>About Us</h2>
+        <p class="small">Shoply (Demo) is a small educational project demonstrating a frontend-only e-commerce portal design. No real payments occur here.</p>
+        <h3 style="margin-top:12px">Features included</h3>
+        <ul class="small">
+          <li>Menu navigation (Home, Products, Orders, Wishlist, Contact, About)</li>
+          <li>Registration & Login with validation</li>
+          <li>Orders, Wishlist, Reviews, Customer Care form, and Reporting</li>
+        </ul>`;
+      return wrapper;
+    }
+
+    // ---------- Auth messages ----------
+    function unauthMessage(targetRoute){
+      const box = document.createElement('div'); box.className='card';
+      box.innerHTML = `<p class="small muted">You must be signed in to access this section.</p>
+        <div style="display:flex;gap:8px">
+          <button class="btn" id="uLoginBtn">Login</button>
+          <button class="btn secondary" id="uRegisterBtn">Register</button>
+        </div>`;
+      // event listeners will be attached by main after render
+      setTimeout(()=>{ // attach after DOM added
+        const l = box.querySelector('#uLoginBtn'); if(l) l.addEventListener('click', openLoginModal);
+        const r = box.querySelector('#uRegisterBtn'); if(r) r.addEventListener('click', openRegisterModal);
+      },50);
+      return box;
+    }
+
+    // ---------- Actions (add wishlist / order / review) ----------
+    function addToWishlist(productId){
+      if(!STATE.currentUser){ alert('Please login to add to wishlist.'); openLoginModal(); return; }
+      const email = STATE.currentUser;
+      STATE.wishlist[email] = STATE.wishlist[email] || [];
+      if(!STATE.wishlist[email].includes(productId)){
+        STATE.wishlist[email].push(productId);
+        saveState('wishlist', STATE.wishlist);
+        alert('Added to wishlist.');
+      } else {
+        alert('Already in wishlist.');
+      }
+      refreshQuickPanel();
+    }
+
+    function removeFromWishlist(productId){
+      if(!STATE.currentUser) return;
+      const email = STATE.currentUser;
+      STATE.wishlist[email] = (STATE.wishlist[email] || []).filter(p=>p!==productId);
+      saveState('wishlist', STATE.wishlist);
+      renderView('wishlist');
+      refreshQuickPanel();
+    }
+
+    function placeOrder(productId, qty=1){
+      if(!STATE.currentUser){ alert('Please login to place an order.'); openLoginModal(); return; }
+      const email = STATE.currentUser;
+      STATE.orders[email] = STATE.orders[email] || [];
+      STATE.orders[email].push({ orderId: uid('ord'), productId, qty: Number(qty), date: new Date().toISOString() });
+      saveState('orders', STATE.orders);
+      // remove from wishlist if present
+      STATE.wishlist[email] = (STATE.wishlist[email] || []).filter(p=>p!==productId);
+      saveState('wishlist', STATE.wishlist);
+      alert('Order placed successfully (demo).');
+      renderView('orders');
+      refreshQuickPanel();
+    }
+
+    function leaveReview(productId){
+      if(!STATE.currentUser){ alert('Please login to leave a review.'); openLoginModal(); return; }
+      const modal = createModal();
+      modal.innerHTML = `
+        <div style="padding:12px;max-width:520px">
+          <h3>Leave a Review</h3>
+          <p class="small muted">Product: ${SAMPLE_PRODUCTS.find(p=>p.id===productId)?.title || productId}</p>
+          <label class="small">Rating (1-5)</label>
+          <input type="number" id="rvRating" min="1" max="5" value="5" />
+          <label class="small">Comment</label>
+          <textarea id="rvComment" rows="4" placeholder="Write your review" required></textarea>
+          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+            <button class="btn" id="rvSubmit">Submit</button>
+            <button class="btn secondary" id="rvCancel">Cancel</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+      modal.querySelector('#rvCancel').addEventListener('click', ()=>modal.remove());
+      modal.querySelector('#rvSubmit').addEventListener('click', ()=>{
+        const rating = Number(modal.querySelector('#rvRating').value) || 5;
+        const comment = modal.querySelector('#rvComment').value.trim();
+        if(comment.length < 3){ alert('Please write at least 3 characters.'); return; }
+        STATE.reviews.push({ email: STATE.currentUser, productId, rating, comment, date: new Date().toISOString()});
+        saveState('reviews', STATE.reviews);
+        alert('Review submitted. Thank you!');
+        modal.remove();
+        refreshQuickPanel();
+      });
+    }
+
+    function viewReviews(productId){
+      const modal = createModal();
+      modal.innerHTML = `<div style="padding:12px;max-width:520px"><h3>Reviews</h3><div id="rvList"></div><div style="text-align:right"><button class="btn secondary" id="closeRv">Close</button></div></div>`;
+      document.body.appendChild(modal);
+      const list = modal.querySelector('#rvList');
+      const reviews = (STATE.reviews || []).filter(r => r.productId === productId).reverse();
+      if(reviews.length === 0){
+        list.innerHTML = '<p class="small muted">No reviews for this product yet.</p>';
+      } else {
+        reviews.forEach(r => {
+          const item = document.createElement('div'); item.className='card'; item.style.marginTop='8px';
+          item.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between"><div><strong>${r.email}</strong></div><div class="rating">${'★'.repeat(r.rating)}</div></div>
+            <p class="small">${r.comment}</p><p class="muted small">${new Date(r.date).toLocaleString()}</p>`;
+          list.appendChild(item);
+        });
+      }
+      modal.querySelector('#closeRv').addEventListener('click', ()=>modal.remove());
+    }
+
+    // ---------- Modals ----------
+    function createModal(){
+      const overlay = document.createElement('div');
+      overlay.style.position='fixed'; overlay.style.inset=0; overlay.style.display='flex';
+      overlay.style.alignItems='center'; overlay.style.justifyContent='center';
+      overlay.style.background='rgba(0,0,0,0.36)'; overlay.style.zIndex=9999;
+      overlay.addEventListener('click', (e)=>{ if(e.target===overlay) overlay.remove(); });
+      const box = document.createElement('div'); box.className='card'; box.style.minWidth='320px'; box.style.maxWidth='95%';
+      overlay.appendChild(box);
+      return overlay;
+    }
+
+    // ---------- Quick panel refresh ----------
+    function refreshQuickPanel(){
+      const user = getCurrentUserObj();
+      $('#quickOrders').textContent = user ? (STATE.orders[user.email] || []).length : 0;
+      $('#quickWishlist').textContent = user ? (STATE.wishlist[user.email] || []).length : 0;
+      $('#quickReviews').textContent = (STATE.reviews || []).length;
+      $('#loggedAs').textContent = user ? `Signed in as ${user.name} (${user.email})` : 'Not signed in';
+    }
+
+    // ---------- Registration & Login (validation) ----------
+    function openRegisterModal(){
+      const modal = createModal();
+      modal.innerHTML = `
+        <div style="padding:12px;max-width:520px">
+          <h3>Register</h3>
+          <form id="regForm">
+            <input type="text" id="regName" placeholder="Full name" required />
+            <input type="email" id="regEmail" placeholder="Email" required />
+            <input type="password" id="regPass" placeholder="Password (min 8 chars incl. number)" required />
+            <input type="password" id="regPass2" placeholder="Confirm password" required />
+            <div id="regError" class="error"></div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+              <button class="btn" type="submit">Create account</button>
+              <button class="btn secondary" id="regCancel" type="button">Cancel</button>
+            </div>
+          </form>
+        </div>
+      `;
+      document.body.appendChild(modal);
+      modal.querySelector('#regCancel').addEventListener('click', ()=>modal.remove());
+
+      modal.querySelector('#regForm').addEventListener('submit', (e)=> {
+        e.preventDefault();
+        const name = modal.querySelector('#regName').value.trim();
+        const email = modal.querySelector('#regEmail').value.trim().toLowerCase();
+        const pass = modal.querySelector('#regPass').value;
+        const pass2 = modal.querySelector('#regPass2').value;
+        const err = modal.querySelector('#regError');
+
+        // validation
+        if(name.length < 2){ err.textContent = 'Enter your full name.'; return; }
+        if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ err.textContent = 'Enter a valid email address.'; return; }
+        if(pass.length < 8 || !/\d/.test(pass) || !/[A-Za-z]/.test(pass)){ err.textContent = 'Password must be at least 8 characters and include a number and letter.'; return; }
+        if(pass !== pass2){ err.textContent = 'Passwords do not match.'; return; }
+        if(STATE.users.some(u => u.email === email)){ err.textContent = 'An account with that email already exists.'; return; }
+
+        // save user (demo: store plain hash-like string; do NOT do this in production)
+        STATE.users.push({ email, name, passwordHash: btoa(pass) }); // simple encoding for demo
+        saveState('users', STATE.users);
+        modal.remove();
+        STATE.currentUser = email; saveState('currentUser', email);
+        alert('Registration successful. Signed in.');
+        refreshQuickPanel();
+        renderView('home');
+      });
+    }
+
+    function openLoginModal(){
+      const modal = createModal();
+      modal.innerHTML = `
+        <div style="padding:12px;max-width:420px">
+          <h3>Login</h3>
+          <form id="loginForm">
+            <input type="email" id="loginEmail" placeholder="Email" required />
+            <input type="password" id="loginPass" placeholder="Password" required />
+            <div id="loginError" class="error"></div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+              <button class="btn" type="submit">Login</button>
+              <button class="btn secondary" id="loginCancel" type="button">Cancel</button>
+            </div>
+          </form>
+        </div>
+      `;
+      document.body.appendChild(modal);
+      modal.querySelector('#loginCancel').addEventListener('click', ()=>modal.remove());
+
+      modal.querySelector('#loginForm').addEventListener('submit', (e)=>{
+        e.preventDefault();
+        const em = modal.querySelector('#loginEmail').value.trim().toLowerCase();
+        const pw = modal.querySelector('#loginPass').value;
+        const err = modal.querySelector('#loginError');
+
+        const user = STATE.users.find(u=>u.email===em);
+        if(!user){ err.textContent='No account found with this email.'; return; }
+        if(user.passwordHash !== btoa(pw)){ err.textContent='Incorrect password.'; return; }
+        // success
+        STATE.currentUser = user.email; saveState('currentUser', user.email);
+        modal.remove();
+        alert('Login successful.');
+        refreshQuickPanel();
+        renderView('home');
+      });
+    }
+
+    function logout(){
+      STATE.currentUser = null; saveState('currentUser', null);
+      refreshQuickPanel();
+      renderView('home');
+    }
+
+    // ---------- Customer care & reporting ----------
+    function openCustomerCareModal(){
+      const modal = createModal();
+      modal.innerHTML = `
+        <div style="padding:12px;max-width:520px">
+          <h3>Customer Care</h3>
+          <p class="small muted">Fill this and our team will respond (demo: saved locally)</p>
+          <form id="ccForm">
+            <input id="ccName" placeholder="Your name" required />
+            <input id="ccEmail" placeholder="Your email" required />
+            <select id="ccTopic"><option>Order issue</option><option>Payment</option><option>Product</option><option>Other</option></select>
+            <textarea id="ccMessage" rows="4" placeholder="Describe the issue" required></textarea>
+            <div class="small muted" id="ccMsg"></div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+              <button class="btn">Send</button>
+              <button class="btn secondary" id="ccCancel" type="button">Close</button>
+            </div>
+          </form>
+        </div>`;
+      document.body.appendChild(modal);
+      modal.querySelector('#ccCancel').addEventListener('click', ()=>modal.remove());
+      modal.querySelector('#ccForm').addEventListener('submit', (e)=>{
+        e.preventDefault();
+        const rec = {
+          name: modal.querySelector('#ccName').value.trim(),
+          email: modal.querySelector('#ccEmail').value.trim(),
+          topic: modal.querySelector('#ccTopic').value,
+          message: modal.querySelector('#ccMessage').value.trim(),
+          date: new Date().toISOString()
+        };
+        const reports = loadState('supportMessages', []);
+        reports.push(rec); saveState('supportMessages', reports);
+        modal.querySelector('#ccMsg').textContent = 'Message saved (demo). We will contact you.';
+        setTimeout(()=>modal.remove(), 1200);
+      });
+    }
+
+    // ---------- Report submission inside contact page ----------
+    function attachContactAndReportHandlers(){
+      const cf = $('#contactForm');
+      if(cf){
+        cf.addEventListener('submit', (e)=>{
+          e.preventDefault();
+          const name = $('#contactName').value.trim();
+          const email = $('#contactEmail').value.trim();
+          const topic = $('#contactTopic').value;
+          const msg = $('#contactMessage').value.trim();
+          if(!name || !email || !msg){ $('#contactError').textContent='Fill all fields.'; return; }
+          const store = loadState('contactMessages', []);
+          store.push({name,email,topic,msg,date:new Date().toISOString()}); saveState('contactMessages', store);
+          $('#contactError').textContent='Message sent (demo).';
+          setTimeout(()=>{ $('#contactError').textContent=''; cf.reset(); },1200);
+        });
+      }
+
+      const rf = $('#reportForm');
+      if(rf){
+        rf.addEventListener('submit', (e)=>{
+          e.preventDefault();
+          const type = $('#reportType').value;
+          const target = $('#reportTarget').value.trim();
+          const reason = $('#reportReason').value.trim();
+          if(!target || !reason){ $('#reportMsg').textContent='Please fill target and reason.'; return; }
+          const rpt = loadState('reports', []);
+          rpt.push({type,target,reason,date:new Date().toISOString()}); saveState('reports', rpt);
+          $('#reportMsg').textContent = 'Report submitted (demo).';
+          setTimeout(()=>{ $('#reportMsg').textContent=''; rf.reset(); },1400);
+        });
+      }
+    }
+
+    // ---------- Attach global event listeners ----------
+    function attachGlobalHandlers(){
+      // main nav hash routing
+      window.addEventListener('hashchange', ()=> {
+        const route = (location.hash || '#home').replace('#','') || 'home';
+        renderView(route);
+        // attach handlers in new view (delegated)
+        attachDelegatedHandlers();
+        attachContactAndReportHandlers();
+      });
+
+      // initial attach: delegated click handlers for dynamic product actions
+      function delegatedClick(e){
+        const tgt = e.target;
+        if(tgt.matches('.add-wishlist')){ addToWishlist(tgt.dataset.id); }
+        if(tgt.matches('.add-cart')){ // read qty input nearby
+          const pid = tgt.dataset.id;
+          // try to find matching qty input in same product card
+          const card = tgt.closest('.product');
+          const q = card ? card.querySelector('.qty') : null;
+          const qty = q ? Number(q.value) : 1;
+          placeOrder(pid, qty);
+        }
+        if(tgt.matches('.place-order')){ placeOrder(tgt.dataset.id, 1); }
+        if(tgt.matches('.remove-wishlist')){ removeFromWishlist(tgt.dataset.id); }
+        if(tgt.matches('.leave-review')){ leaveReview(tgt.dataset.id); }
+        if(tgt.matches('.view-reviews')){ viewReviews(tgt.dataset.id); }
+      }
+      document.body.addEventListener('click', delegatedClick);
+
+      // menu buttons
+      $('#openRegisterBtn').addEventListener('click', openRegisterModal);
+      $('#openLoginBtn').addEventListener('click', openLoginModal);
+
+      // show customer care
+      $('#openCustomerCare').addEventListener('click', openCustomerCareModal);
+
+      // logout on double click of loggedAs
+      $('#loggedAs').addEventListener('dblclick', ()=> {
+        if(confirm('Log out?')) logout();
+      });
+
+      // nav links prevent default and use hash (already does)
+      document.querySelectorAll('#mainNav a').forEach(a=>{
+        a.addEventListener('click', (e)=> {
+          // default hash navigation is fine; highlight handled in renderView
+        });
+      });
+
+      // attach event listeners after each render for forms in contact etc.
+      window.addEventListener('DOMContentLoaded', ()=> {
+        attachContactAndReportHandlers();
+      });
+    }
+
+    // ---------- Modal helper: for review & other small modals ----------
+    // (createModal already defined)
+
+    // ---------- Init ----------
+    function init(){
+      attachGlobalHandlers();
+      // navigate to hash or default
+      const route = (location.hash || '#home').replace('#','') || 'home';
+      renderView(route);
+      attachDelegatedHandlers();
+      attachContactAndReportHandlers();
+      refreshQuickPanel();
+      // wire quick panel counts initially
+    }
+
+    // small helper to attach handlers that require rendered DOM
+    function attachDelegatedHandlers(){
+      // e.g. register / login triggers inside unauth view might need attaching - those use setTimeout in unauthMessage
+    }
+
+    // run init
+    init();
+
+    // ---------- Save state before unload ----------
+    window.addEventListener('beforeunload', ()=> {
+      // ensure all saved
+      saveState('users', STATE.users);
+      saveState('currentUser', STATE.currentUser);
+      saveState('wishlist', STATE.wishlist);
+      saveState('orders', STATE.orders);
+      saveState('reviews', STATE.reviews);
+    });
+
+  </script>
+</body>
+</html>
